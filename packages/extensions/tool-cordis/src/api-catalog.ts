@@ -3194,7 +3194,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'GithubAddCommentRequest',
-    declaration: 'export interface GithubAddCommentRequest {\n    readonly repo: string;\n    readonly number: number;\n    readonly body: string;\n}',
+    declaration: 'export interface GithubAddCommentRequest {\n    readonly repo?: string | undefined;\n    readonly number: number;\n    readonly body: string;\n}',
   },
   {
     name: 'GithubCheckContext',
@@ -3210,7 +3210,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'GithubClosePullRequestRequest',
-    declaration: 'export interface GithubClosePullRequestRequest {\n    readonly repo: string;\n    readonly number: number;\n    readonly confirm?: boolean | undefined;\n}',
+    declaration: 'export interface GithubClosePullRequestRequest {\n    readonly repo?: string | undefined;\n    readonly number: number;\n    readonly confirm?: boolean | undefined;\n}',
   },
   {
     name: 'GithubCommentCreatedValue',
@@ -3242,11 +3242,11 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'GithubGetContextRequest',
-    declaration: 'export interface GithubGetContextRequest {\n    readonly repo: string;\n    readonly number: number;\n    readonly enrich?: boolean | undefined;\n    readonly confirmExport?: boolean | undefined;\n    readonly repoPath?: string | undefined;\n}',
+    declaration: 'export interface GithubGetContextRequest {\n    readonly repo?: string | undefined;\n    readonly number: number;\n    readonly enrich?: boolean | undefined;\n    readonly confirmExport?: boolean | undefined;\n    readonly repoPath?: string | undefined;\n}',
   },
   {
     name: 'GithubListCommitsRequest',
-    declaration: 'export interface GithubListCommitsRequest {\n    readonly repo: string;\n    readonly number: number;\n    readonly first?: number | undefined;\n}',
+    declaration: 'export interface GithubListCommitsRequest {\n    readonly repo?: string | undefined;\n    readonly number: number;\n    readonly first?: number | undefined;\n}',
   },
   {
     name: 'GithubListPullRequestsRequest',
@@ -3254,7 +3254,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'GithubListThreadsRequest',
-    declaration: 'export interface GithubListThreadsRequest {\n    readonly repo: string;\n    readonly number: number;\n    readonly filter?: GithubThreadFilter | undefined;\n}',
+    declaration: 'export interface GithubListThreadsRequest {\n    readonly repo?: string | undefined;\n    readonly number: number;\n    readonly filter?: GithubThreadFilter | undefined;\n}',
   },
   {
     name: 'GithubMergeable',
@@ -3266,7 +3266,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'GithubMergePullRequestRequest',
-    declaration: 'export interface GithubMergePullRequestRequest {\n    readonly repo: string;\n    readonly number: number;\n    readonly method: GithubMergeMethod;\n    readonly deleteBranch?: boolean | undefined;\n    readonly confirm?: boolean | undefined;\n}',
+    declaration: 'export interface GithubMergePullRequestRequest {\n    readonly repo?: string | undefined;\n    readonly number: number;\n    readonly method: GithubMergeMethod;\n    readonly deleteBranch?: boolean | undefined;\n    readonly confirm?: boolean | undefined;\n}',
   },
   {
     name: 'GithubPrDetail',
@@ -3290,7 +3290,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'GithubPullRequestRequest',
-    declaration: 'export interface GithubPullRequestRequest {\n    readonly repo: string;\n    readonly number: number;\n}',
+    declaration: 'export interface GithubPullRequestRequest {\n    readonly repo?: string | undefined;\n    readonly number: number;\n}',
   },
   {
     name: 'GithubPullRequestStateValue',
@@ -3302,7 +3302,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'GithubReopenPullRequestRequest',
-    declaration: 'export interface GithubReopenPullRequestRequest {\n    readonly repo: string;\n    readonly number: number;\n}',
+    declaration: 'export interface GithubReopenPullRequestRequest {\n    readonly repo?: string | undefined;\n    readonly number: number;\n}',
   },
   {
     name: 'GithubReplyToThreadRequest',
@@ -3334,7 +3334,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'GithubSubmitReviewRequest',
-    declaration: 'export interface GithubSubmitReviewRequest {\n    readonly repo: string;\n    readonly number: number;\n    readonly event: GithubReviewEvent;\n    readonly body?: string | undefined;\n    readonly confirm?: boolean | undefined;\n}',
+    declaration: 'export interface GithubSubmitReviewRequest {\n    readonly repo?: string | undefined;\n    readonly number: number;\n    readonly event: GithubReviewEvent;\n    readonly body?: string | undefined;\n    readonly confirm?: boolean | undefined;\n}',
   },
   {
     name: 'GithubSuccess',

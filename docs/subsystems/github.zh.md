@@ -273,8 +273,8 @@ interface GithubPullRequestListValue {
 ```ts type-equiv
 /** Request addressing one pull request by repository and number. */
 interface GithubPullRequestRequest {
-  /** `owner/name`. */
-  readonly repo: string
+  /** `owner/name`; omit only when exactly one favorite is configured. */
+  readonly repo?: string | undefined
   readonly number: number
 }
 ```
@@ -282,7 +282,7 @@ interface GithubPullRequestRequest {
 ```ts type-equiv
 /** Thread listing request with a resolution-state filter. */
 interface GithubListThreadsRequest {
-  readonly repo: string
+  readonly repo?: string | undefined
   readonly number: number
   /** Which threads to return; defaults to `unresolved`. */
   readonly filter?: GithubThreadFilter | undefined
@@ -309,7 +309,7 @@ interface GithubThreadRequest {
 ```ts type-equiv
 /** Commit listing request. */
 interface GithubListCommitsRequest {
-  readonly repo: string
+  readonly repo?: string | undefined
   readonly number: number
   /** Maximum rows (1..250); defaults to 100. */
   readonly first?: number | undefined
@@ -329,7 +329,7 @@ interface GithubCommitListValue {
 ```ts type-equiv
 /** Bulk-context request over `gh pr-enrich`. */
 interface GithubGetContextRequest {
-  readonly repo: string
+  readonly repo?: string | undefined
   readonly number: number
   /** Run Claude analysis on the collected context (exports PR content). */
   readonly enrich?: boolean | undefined
@@ -343,7 +343,7 @@ interface GithubGetContextRequest {
 ```ts type-equiv
 /** Create one top-level issue comment. */
 interface GithubAddCommentRequest {
-  readonly repo: string
+  readonly repo?: string | undefined
   readonly number: number
   readonly body: string
 }
@@ -368,7 +368,7 @@ interface GithubSetThreadResolvedRequest {
 ```ts type-equiv
 /** Submit one pull-request review. */
 interface GithubSubmitReviewRequest {
-  readonly repo: string
+  readonly repo?: string | undefined
   readonly number: number
   readonly event: GithubReviewEvent
   readonly body?: string | undefined
@@ -380,7 +380,7 @@ interface GithubSubmitReviewRequest {
 ```ts type-equiv
 /** Merge one pull request. */
 interface GithubMergePullRequestRequest {
-  readonly repo: string
+  readonly repo?: string | undefined
   readonly number: number
   readonly method: GithubMergeMethod
   readonly deleteBranch?: boolean | undefined
@@ -392,7 +392,7 @@ interface GithubMergePullRequestRequest {
 ```ts type-equiv
 /** Close one pull request. */
 interface GithubClosePullRequestRequest {
-  readonly repo: string
+  readonly repo?: string | undefined
   readonly number: number
   /** Must be true for the close to execute. */
   readonly confirm?: boolean | undefined
@@ -402,7 +402,7 @@ interface GithubClosePullRequestRequest {
 ```ts type-equiv
 /** Reopen one closed pull request. */
 interface GithubReopenPullRequestRequest {
-  readonly repo: string
+  readonly repo?: string | undefined
   readonly number: number
 }
 ```

@@ -47,6 +47,8 @@ import CordisHostRunner from '@deepseek-ai/dsh-cordis-host-runner'
 import * as ToolCordis from '@deepseek-ai/dsh-tool-cordis'
 import * as ToolFs from '@deepseek-ai/dsh-tool-fs'
 import * as ToolFsSearch from '@deepseek-ai/dsh-tool-fs-search'
+import GithubService from '@deepseek-ai/dsh-github'
+import * as ToolGithub from '@deepseek-ai/dsh-tool-github'
 import * as ToolStrReplaceEditor from '@deepseek-ai/dsh-tool-str-replace-editor'
 import TerminalSessionService from '@deepseek-ai/dsh-terminal'
 import * as ToolPty from '@deepseek-ai/dsh-tool-terminal'
@@ -327,6 +329,24 @@ const TOOL_PACKAGES: ToolPackage[] = [
     },
     note:
       'glob and grep are unconditional discovery tools that spawn the packaged ripgrep binary (`@vscode/ripgrep`) through ctx.subprocess as ordinary foreground calls (never background jobs) — no host `rg` install and no shell layer. The catalog uses `sampleOverCapGlobResults: true`; deployments must choose that behavior explicitly. Capped results save the complete formatted list through the optional ctx.spillStore backend; returned locators are follow-up-readable/searchable when the backend exposes local paths in co-located deployments.',
+  },
+  {
+    pkg: '@deepseek-ai/dsh-tool-github',
+    dir: 'tool-github',
+    source: 'packages/github/tool-github/src/index.ts',
+    requires: ['ctx.tools', 'ctx.systemPrompt', 'ctx.github'],
+    writes: ['tool/call', 'tool/result'],
+    async mount(ctx) {
+      // The tools inject `github`; the gateway service resolves the `gh`
+      // executable through the subprocess seam at activation, so the real
+      // local subprocess runtime mounts with it. No gh call runs during
+      // schema harvest.
+      await ctx.plugin(LocalSubprocessRuntime)
+      await ctx.plugin(GithubService)
+      await ctx.plugin(ToolGithub)
+    },
+    note:
+      'All twelve tools are thin bridges over the ctx.github gh-CLI gateway: reads expose PR listings, detail, review threads, commits, and a bounded pr-enrich digest; writes cover comments, thread replies, thread resolution, reviews, merge, and close. Service rejections surface as typed GithubToolError outcomes; review, merge, and close additionally require confirm: true, and enrichment requires confirmExport: true.',
   },
   {
     pkg: '@deepseek-ai/dsh-tool-terminal',

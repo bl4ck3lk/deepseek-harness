@@ -25,6 +25,7 @@ This table connects model-visible tool names to the plugin package and service s
 | `@deepseek-ai/dsh-tool-str-replace-editor` | `str_replace_editor` | `ctx.tools`, `ctx.fs` | `tool/call`, `fs/observed after view presence/absence, edit absence, or successful mutation`, `tool/result` | - | Standalone view/create/unique literal replace/line insert tool over the filesystem seam; it composes with any shell or terminal API. |
 | `@deepseek-ai/dsh-tool-fs` | `edit`, `read`, `read_image`, `write` | `ctx.tools`, `ctx.fs`, `ctx.systemPrompt`, `ctx.attachments (read_image registration)`, `ctx.llm + an image-capable route (read_image execution)` | `tool/call`, `fs/write-intent or fs/edit-intent for mutations`, `fs/observed after read presence/absence or successful file operation`, `durable attachment (read_image)`, `tool/result` | - | The read-before-write/edit policy is added by `@deepseek-ai/dsh-fs-observation-policy` (an `fs/*` event-gate plugin, no schema change); a deployment that loads these tools is expected to also load it. `read_image` is not registered without `ctx.attachments`; its schema is route-independent, and execution refuses unless the exact routed model declares image input. |
 | `@deepseek-ai/dsh-tool-fs-search` | `glob`, `grep` | `ctx.tools`, `ctx.subprocess`, `ctx.systemPrompt` | `tool/call`, `tool/result` | - | glob and grep are unconditional discovery tools that spawn the packaged ripgrep binary (`@vscode/ripgrep`) through ctx.subprocess as ordinary foreground calls (never background jobs) — no host `rg` install and no shell layer. The catalog uses `sampleOverCapGlobResults: true`; deployments must choose that behavior explicitly. Capped results save the complete formatted list through the optional ctx.spillStore backend; returned locators are follow-up-readable/searchable when the backend exposes local paths in co-located deployments. |
+| `@deepseek-ai/dsh-tool-github` | `gh_pr_close`, `gh_pr_comment`, `gh_pr_commits`, `gh_pr_context`, `gh_pr_list`, `gh_pr_merge`, `gh_pr_reply`, `gh_pr_review`, `gh_pr_thread`, `gh_pr_thread_resolve`, `gh_pr_threads`, `gh_pr_view` | `ctx.tools`, `ctx.systemPrompt`, `ctx.github` | `tool/call`, `tool/result` | - | All twelve tools are thin bridges over the ctx.github gh-CLI gateway: reads expose PR listings, detail, review threads, commits, and a bounded pr-enrich digest; writes cover comments, thread replies, thread resolution, reviews, merge, and close. Service rejections surface as typed GithubToolError outcomes; review, merge, and close additionally require confirm: true, and enrichment requires confirmExport: true. |
 | `@deepseek-ai/dsh-tool-terminal` | `terminal_close`, `terminal_list`, `terminal_open`, `terminal_read`, `terminal_send`, `terminal_signal` | `ctx.tools`, `ctx.terminals`, `ctx.systemPrompt`, `ctx.jobs at call time for run_in_background` | `tool/call`, `tool/result` | - | The six terminal tools are opt-in and complement one-shot shell/filesystem tools. `terminal_send(run_in_background: true)` registers with `ctx.jobs`; TUI, named key sequences, BEL, resize, auto-start, and cross-agent sharing are absent from the schema. |
 | `@deepseek-ai/dsh-tool-goal` | `create_goal`, `get_goal`, `update_goal` | `ctx.tools`, `ctx.agents`, `ctx.goals`, `ctx.systemPrompt`, `a calling Agent in an authorized open turn` | `tool/call`, `goal/change for mutations`, `tool/result` | - | create, edit, pause, and resume require direct-human root authority; complete and blocked also accept the exact current goal round. The default blocked lower bound is three admitted rounds. |
 | `@deepseek-ai/dsh-schedule` | `schedule_create`, `schedule_delete`, `schedule_list` | `ctx.tools`, `ctx.sessions`, `Session persistence`, `a future live root Agent` | `tool/call`, `schedule/change create or delete`, `tool/result` | - | Registered only inside live root Agent scopes created after the opt-in Schedule plugin loads. Version 1 accepts after_seconds, explicit absolute at, and bounded fixed-rate every_seconds, and discloses session-local delivery; management reads and mutations require the shared Session persistence barrier. |
@@ -772,6 +773,389 @@ Search file contents with a ripgrep regular expression. Returns matching lines w
 Source: [`packages/fs/tool-fs-search/src/index.ts`](../packages/fs/tool-fs-search/src/index.ts)
 
 glob and grep are unconditional discovery tools that spawn the packaged ripgrep binary (`@vscode/ripgrep`) through ctx.subprocess as ordinary foreground calls (never background jobs) — no host `rg` install and no shell layer. The catalog uses `sampleOverCapGlobResults: true`; deployments must choose that behavior explicitly. Capped results save the complete formatted list through the optional ctx.spillStore backend; returned locators are follow-up-readable/searchable when the backend exposes local paths in co-located deployments.
+
+<a id="deepseek-aidsh-tool-github"></a>
+
+## `@deepseek-ai/dsh-tool-github`
+
+### `gh_pr_close`
+
+Close one open pull request. Requires confirm: true.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "repo": {
+      "type": "string",
+      "description": "`owner/name`. Omit only when exactly one favorite repository is configured for the github service."
+    },
+    "number": {
+      "type": "integer",
+      "description": "Pull request number."
+    },
+    "confirm": {
+      "type": "boolean",
+      "description": "Must be `true` to execute this mutation. Restate the target in the same turn so the human can veto."
+    }
+  },
+  "required": [
+    "number",
+    "confirm"
+  ]
+}
+```
+
+Source: [`packages/github/tool-github/src/index.ts`](../packages/github/tool-github/src/index.ts)
+
+### `gh_pr_comment`
+
+Create one issue-level comment on a GitHub pull request. Returns the comment URL. Use gh_pr_reply instead to answer inside an existing review thread.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "repo": {
+      "type": "string",
+      "description": "`owner/name`. Omit only when exactly one favorite repository is configured for the github service."
+    },
+    "number": {
+      "type": "integer",
+      "description": "Pull request number."
+    },
+    "body": {
+      "type": "string",
+      "description": "Markdown comment body."
+    }
+  },
+  "required": [
+    "number",
+    "body"
+  ]
+}
+```
+
+Source: [`packages/github/tool-github/src/index.ts`](../packages/github/tool-github/src/index.ts)
+
+### `gh_pr_commits`
+
+List one pull request's commits: short SHA, headline, author, and authored date, plus the total commit count.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "repo": {
+      "type": "string",
+      "description": "`owner/name`. Omit only when exactly one favorite repository is configured for the github service."
+    },
+    "number": {
+      "type": "integer",
+      "description": "Pull request number."
+    },
+    "first": {
+      "type": "integer",
+      "description": "Maximum rows (1..250); defaults to 100."
+    }
+  },
+  "required": [
+    "number"
+  ]
+}
+```
+
+Source: [`packages/github/tool-github/src/index.ts`](../packages/github/tool-github/src/index.ts)
+
+### `gh_pr_context`
+
+Collect one pull request's bulk context through gh pr-enrich: comment and thread counts, check statistics, and on-disk report files. Returns a bounded digest; full comment bodies stay in the returned file paths. Enrichment (enrich: true) exports PR content to a model provider and additionally requires confirmExport: true; without both, a plain digest is collected.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "repo": {
+      "type": "string",
+      "description": "`owner/name`. Omit only when exactly one favorite repository is configured for the github service."
+    },
+    "number": {
+      "type": "integer",
+      "description": "Pull request number."
+    },
+    "enrich": {
+      "type": "boolean",
+      "description": "Run model analysis on the collected context (exports PR content)."
+    },
+    "confirmExport": {
+      "type": "boolean",
+      "description": "Explicit consent to the content export; required when enrich is true."
+    },
+    "repoPath": {
+      "type": "string",
+      "description": "Local checkout of the repository; defaults to the harness cwd."
+    }
+  },
+  "required": [
+    "number"
+  ]
+}
+```
+
+Source: [`packages/github/tool-github/src/index.ts`](../packages/github/tool-github/src/index.ts)
+
+### `gh_pr_list`
+
+List GitHub pull requests of one repository ordered by most recently updated. Returns number, title, state, author, refs, check rollup, and review decision per row. Use it to find the PR number the other gh_pr_* tools need.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "repo": {
+      "type": "string",
+      "description": "`owner/name`. Omit only when exactly one favorite repository is configured for the github service."
+    },
+    "state": {
+      "type": "string",
+      "description": "Lifecycle state filter; defaults to OPEN.",
+      "enum": [
+        "OPEN",
+        "MERGED",
+        "CLOSED"
+      ]
+    },
+    "first": {
+      "type": "integer",
+      "description": "Maximum rows (1..100); defaults to 30."
+    }
+  }
+}
+```
+
+Source: [`packages/github/tool-github/src/index.ts`](../packages/github/tool-github/src/index.ts)
+
+### `gh_pr_merge`
+
+Merge one pull request via squash, merge, or rebase, optionally deleting the head branch. Requires confirm: true.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "repo": {
+      "type": "string",
+      "description": "`owner/name`. Omit only when exactly one favorite repository is configured for the github service."
+    },
+    "number": {
+      "type": "integer",
+      "description": "Pull request number."
+    },
+    "method": {
+      "type": "string",
+      "description": "Merge method.",
+      "enum": [
+        "squash",
+        "merge",
+        "rebase"
+      ]
+    },
+    "deleteBranch": {
+      "type": "boolean",
+      "description": "Delete the head branch after merging."
+    },
+    "confirm": {
+      "type": "boolean",
+      "description": "Must be `true` to execute this mutation. Restate the target in the same turn so the human can veto."
+    }
+  },
+  "required": [
+    "number",
+    "method",
+    "confirm"
+  ]
+}
+```
+
+Source: [`packages/github/tool-github/src/index.ts`](../packages/github/tool-github/src/index.ts)
+
+### `gh_pr_reply`
+
+Reply inside one existing review thread. Get thread ids from gh_pr_threads. Returns the reply URL.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "threadId": {
+      "type": "string",
+      "description": "GraphQL thread id (`PRRT_...`) from gh_pr_threads."
+    },
+    "body": {
+      "type": "string",
+      "description": "Markdown reply body."
+    }
+  },
+  "required": [
+    "threadId",
+    "body"
+  ]
+}
+```
+
+Source: [`packages/github/tool-github/src/index.ts`](../packages/github/tool-github/src/index.ts)
+
+### `gh_pr_review`
+
+Submit one pull request review: approve, request-changes, or comment. Requires confirm: true. GitHub forbids approve/request-changes on your own pull request; that rejection surfaces as a typed error.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "repo": {
+      "type": "string",
+      "description": "`owner/name`. Omit only when exactly one favorite repository is configured for the github service."
+    },
+    "number": {
+      "type": "integer",
+      "description": "Pull request number."
+    },
+    "event": {
+      "type": "string",
+      "description": "Review kind.",
+      "enum": [
+        "approve",
+        "request-changes",
+        "comment"
+      ]
+    },
+    "body": {
+      "type": "string",
+      "description": "Review body; required in practice for request-changes, optional otherwise."
+    },
+    "confirm": {
+      "type": "boolean",
+      "description": "Must be `true` to execute this mutation. Restate the target in the same turn so the human can veto."
+    }
+  },
+  "required": [
+    "number",
+    "event",
+    "confirm"
+  ]
+}
+```
+
+Source: [`packages/github/tool-github/src/index.ts`](../packages/github/tool-github/src/index.ts)
+
+### `gh_pr_thread`
+
+Read one complete review thread by its id, including every comment body. Get thread ids from gh_pr_threads.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "threadId": {
+      "type": "string",
+      "description": "GraphQL thread id (`PRRT_...`) from gh_pr_threads."
+    }
+  },
+  "required": [
+    "threadId"
+  ]
+}
+```
+
+Source: [`packages/github/tool-github/src/index.ts`](../packages/github/tool-github/src/index.ts)
+
+### `gh_pr_thread_resolve`
+
+Resolve or unresolve one review thread by id. Get thread ids from gh_pr_threads.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "threadId": {
+      "type": "string",
+      "description": "GraphQL thread id (`PRRT_...`) from gh_pr_threads."
+    },
+    "resolved": {
+      "type": "boolean",
+      "description": "True resolves the thread; false reopens it."
+    }
+  },
+  "required": [
+    "threadId",
+    "resolved"
+  ]
+}
+```
+
+Source: [`packages/github/tool-github/src/index.ts`](../packages/github/tool-github/src/index.ts)
+
+### `gh_pr_threads`
+
+List one pull request's review threads with location (path and line), resolution state, comment counts, and the first comment preview. Defaults to unresolved threads. Each row carries the thread id gh_pr_thread, gh_pr_reply, and gh_pr_thread_resolve need.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "repo": {
+      "type": "string",
+      "description": "`owner/name`. Omit only when exactly one favorite repository is configured for the github service."
+    },
+    "number": {
+      "type": "integer",
+      "description": "Pull request number."
+    },
+    "filter": {
+      "type": "string",
+      "description": "Which threads to return; defaults to unresolved.",
+      "enum": [
+        "all",
+        "resolved",
+        "unresolved"
+      ]
+    }
+  },
+  "required": [
+    "number"
+  ]
+}
+```
+
+Source: [`packages/github/tool-github/src/index.ts`](../packages/github/tool-github/src/index.ts)
+
+### `gh_pr_view`
+
+Read one GitHub pull request in full: metadata, labels, additions/deletions, resolved and unresolved review-thread counts, head-commit check contexts, and the PR body.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "repo": {
+      "type": "string",
+      "description": "`owner/name`. Omit only when exactly one favorite repository is configured for the github service."
+    },
+    "number": {
+      "type": "integer",
+      "description": "Pull request number."
+    }
+  },
+  "required": [
+    "number"
+  ]
+}
+```
+
+Source: [`packages/github/tool-github/src/index.ts`](../packages/github/tool-github/src/index.ts)
+
+All twelve tools are thin bridges over the ctx.github gh-CLI gateway: reads expose PR listings, detail, review threads, commits, and a bounded pr-enrich digest; writes cover comments, thread replies, thread resolution, reviews, merge, and close. Service rejections surface as typed GithubToolError outcomes; review, merge, and close additionally require confirm: true, and enrichment requires confirmExport: true.
 
 <a id="deepseek-aidsh-tool-terminal"></a>
 

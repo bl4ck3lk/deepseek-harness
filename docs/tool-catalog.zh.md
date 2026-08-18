@@ -27,6 +27,7 @@
 | `@deepseek-ai/dsh-tool-str-replace-editor` | `str_replace_editor` | `ctx.tools`、`ctx.fs` | `tool/call`、`fs/observed after view presence/absence, edit absence, or successful mutation`、`tool/result` | - | 基于文件系统 seam 的独立查看／创建／唯一字面量替换／按行插入工具；可与任何 shell 或终端接口组合。 |
 | `@deepseek-ai/dsh-tool-fs` | `edit`、`read`、`read_image`、`write` | `ctx.tools`、`ctx.fs`、`ctx.systemPrompt`、`ctx.attachments (read_image registration)`、`ctx.llm + an image-capable route (read_image execution)` | `tool/call`、`fs/write-intent or fs/edit-intent for mutations`、`fs/observed after read presence/absence or successful file operation`、`durable attachment (read_image)`、`tool/result` | - | 先读后写／编辑策略由 `@deepseek-ai/dsh-fs-observation-policy` 添加；它是一个 `fs/*` 事件门禁插件，不会改变 schema。加载这些工具的部署按预期也应加载该插件。没有 `ctx.attachments` 时 `read_image` 不会注册；其 schema 与路由无关，执行时除非确切路由的模型声明图像输入，否则拒绝。 |
 | `@deepseek-ai/dsh-tool-fs-search` | `glob`、`grep` | `ctx.tools`、`ctx.subprocess`、`ctx.systemPrompt` | `tool/call`、`tool/result` | - | glob 和 grep 是无条件可用的发现工具，通过 ctx.subprocess spawn 随包提供的 ripgrep 二进制文件（`@vscode/ripgrep`），并作为普通前台调用运行，绝不作为后台任务；无需在宿主机安装 `rg`，也不经过 shell 层。本目录使用 `sampleOverCapGlobResults: true`；部署必须显式选择该行为。结果超过上限时，会通过可选的 ctx.spillStore 后端保存完整的格式化列表；在共置部署中，如果后端公开本地路径，返回的定位信息可供后续读取／搜索。 |
+| `@deepseek-ai/dsh-tool-github` | `gh_pr_close`、`gh_pr_comment`、`gh_pr_commits`、`gh_pr_context`、`gh_pr_list`、`gh_pr_merge`、`gh_pr_reply`、`gh_pr_review`、`gh_pr_thread`、`gh_pr_thread_resolve`、`gh_pr_threads`、`gh_pr_view` | `ctx.tools`、`ctx.systemPrompt`、`ctx.github` | `tool/call`、`tool/result` | - | 全部十二个工具都是 ctx.github gh-CLI 网关之上的薄桥接：读取类提供 PR 列表、详情、评审线程、提交以及有界的 pr-enrich 摘要；写入类覆盖评论、线程回复、线程解决、评审、合并与关闭。服务层的拒绝会以类型化的 GithubToolError 结果呈现；review、merge 与 close 还要求 confirm: true，增强分析要求 confirmExport: true。 |
 | `@deepseek-ai/dsh-tool-terminal` | `terminal_close`、`terminal_list`、`terminal_open`、`terminal_read`、`terminal_send`、`terminal_signal` | `ctx.tools`、`ctx.terminals`、`ctx.systemPrompt`、`ctx.jobs at call time for run_in_background` | `tool/call`、`tool/result` | - | 这 6 个终端工具需要选择启用，用于补充一次性 bash／文件系统工具。`terminal_send(run_in_background: true)` 会注册到 `ctx.jobs`；schema 不包含 TUI、具名按键序列、BEL、调整尺寸、自动启动和跨 agent 共享。 |
 | `@deepseek-ai/dsh-tool-goal` | `create_goal`、`get_goal`、`update_goal` | `ctx.tools`、`ctx.agents`、`ctx.goals`、`ctx.systemPrompt`、`a calling Agent in an authorized open turn` | `tool/call`、`goal/change for mutations`、`tool/result` | - | create、edit、pause 和 resume 要求直接来自人类的根权限；complete 和 blocked 也接受确切的当前 Goal Round。blocked 的默认下限是 3 个获准的 Round。 |
 | `@deepseek-ai/dsh-schedule` | `schedule_create`、`schedule_delete`、`schedule_list` | `ctx.tools`、`ctx.sessions`、Session 持久化、未来创建的 live 根 Agent | `tool/call`、`schedule/change create or delete`、`tool/result` | - | 仅在选择启用的 Schedule 插件加载后创建的 live 根 Agent scope 内注册。版本 1 接受 after_seconds、显式绝对 at 和有界固定速率 every_seconds，并披露 session-local 交付；管理读取与变更必须通过共享的 Session 持久化 barrier。 |
@@ -776,6 +777,389 @@ pwsh 工具是 Windows 组合中 bash 执行器 seam 的 PowerShell 方言消费
 来源：[`packages/fs/tool-fs-search/src/index.ts`](../packages/fs/tool-fs-search/src/index.ts)
 
 glob 和 grep 是无条件可用的发现工具，通过 ctx.subprocess spawn 随包提供的 ripgrep 二进制文件（`@vscode/ripgrep`），并作为普通前台调用运行，绝不作为后台任务；无需在宿主机安装 `rg`，也不经过 shell 层。本目录使用 `sampleOverCapGlobResults: true`；部署必须显式选择该行为。结果超过上限时，会通过可选的 ctx.spillStore 后端保存完整的格式化列表；在共置部署中，如果后端公开本地路径，返回的定位信息可供后续读取／搜索。
+
+<a id="deepseek-aidsh-tool-github"></a>
+
+## `@deepseek-ai/dsh-tool-github`
+
+### `gh_pr_close`
+
+关闭一个打开的 pull request。需要 confirm: true。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "repo": {
+      "type": "string",
+      "description": "`owner/name`. Omit only when exactly one favorite repository is configured for the github service."
+    },
+    "number": {
+      "type": "integer",
+      "description": "Pull request number."
+    },
+    "confirm": {
+      "type": "boolean",
+      "description": "Must be `true` to execute this mutation. Restate the target in the same turn so the human can veto."
+    }
+  },
+  "required": [
+    "number",
+    "confirm"
+  ]
+}
+```
+
+来源：[`packages/github/tool-github/src/index.ts`](../packages/github/tool-github/src/index.ts)
+
+### `gh_pr_comment`
+
+在 GitHub pull request 上创建一条 issue 级评论。返回评论 URL。如需在已有评审线程内回答，请改用 gh_pr_reply。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "repo": {
+      "type": "string",
+      "description": "`owner/name`. Omit only when exactly one favorite repository is configured for the github service."
+    },
+    "number": {
+      "type": "integer",
+      "description": "Pull request number."
+    },
+    "body": {
+      "type": "string",
+      "description": "Markdown comment body."
+    }
+  },
+  "required": [
+    "number",
+    "body"
+  ]
+}
+```
+
+来源：[`packages/github/tool-github/src/index.ts`](../packages/github/tool-github/src/index.ts)
+
+### `gh_pr_commits`
+
+列出一个 pull request 的提交：短 SHA、标题、作者与创作日期，并给出提交总数。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "repo": {
+      "type": "string",
+      "description": "`owner/name`. Omit only when exactly one favorite repository is configured for the github service."
+    },
+    "number": {
+      "type": "integer",
+      "description": "Pull request number."
+    },
+    "first": {
+      "type": "integer",
+      "description": "Maximum rows (1..250); defaults to 100."
+    }
+  },
+  "required": [
+    "number"
+  ]
+}
+```
+
+来源：[`packages/github/tool-github/src/index.ts`](../packages/github/tool-github/src/index.ts)
+
+### `gh_pr_context`
+
+通过 gh pr-enrich 收集一个 pull request 的批量上下文：评论与线程计数、检查统计以及磁盘报告文件。返回有界的摘要；完整评论正文保留在返回的文件路径中。增强分析（enrich: true）会把 PR 内容导出给模型提供方，并额外要求 confirmExport: true；两者不全满足时只收集普通摘要。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "repo": {
+      "type": "string",
+      "description": "`owner/name`. Omit only when exactly one favorite repository is configured for the github service."
+    },
+    "number": {
+      "type": "integer",
+      "description": "Pull request number."
+    },
+    "enrich": {
+      "type": "boolean",
+      "description": "Run model analysis on the collected context (exports PR content)."
+    },
+    "confirmExport": {
+      "type": "boolean",
+      "description": "Explicit consent to the content export; required when enrich is true."
+    },
+    "repoPath": {
+      "type": "string",
+      "description": "Local checkout of the repository; defaults to the harness cwd."
+    }
+  },
+  "required": [
+    "number"
+  ]
+}
+```
+
+来源：[`packages/github/tool-github/src/index.ts`](../packages/github/tool-github/src/index.ts)
+
+### `gh_pr_list`
+
+按最近更新时间顺序列出一个仓库的 GitHub pull request。每行返回编号、标题、状态、作者、分支引用、检查汇总与评审决定。用它找到其他 gh_pr_* 工具所需的 PR 编号。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "repo": {
+      "type": "string",
+      "description": "`owner/name`. Omit only when exactly one favorite repository is configured for the github service."
+    },
+    "state": {
+      "type": "string",
+      "description": "Lifecycle state filter; defaults to OPEN.",
+      "enum": [
+        "OPEN",
+        "MERGED",
+        "CLOSED"
+      ]
+    },
+    "first": {
+      "type": "integer",
+      "description": "Maximum rows (1..100); defaults to 30."
+    }
+  }
+}
+```
+
+来源：[`packages/github/tool-github/src/index.ts`](../packages/github/tool-github/src/index.ts)
+
+### `gh_pr_merge`
+
+以 squash、merge 或 rebase 方式合并一个 pull request，可选删除头分支。需要 confirm: true。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "repo": {
+      "type": "string",
+      "description": "`owner/name`. Omit only when exactly one favorite repository is configured for the github service."
+    },
+    "number": {
+      "type": "integer",
+      "description": "Pull request number."
+    },
+    "method": {
+      "type": "string",
+      "description": "Merge method.",
+      "enum": [
+        "squash",
+        "merge",
+        "rebase"
+      ]
+    },
+    "deleteBranch": {
+      "type": "boolean",
+      "description": "Delete the head branch after merging."
+    },
+    "confirm": {
+      "type": "boolean",
+      "description": "Must be `true` to execute this mutation. Restate the target in the same turn so the human can veto."
+    }
+  },
+  "required": [
+    "number",
+    "method",
+    "confirm"
+  ]
+}
+```
+
+来源：[`packages/github/tool-github/src/index.ts`](../packages/github/tool-github/src/index.ts)
+
+### `gh_pr_reply`
+
+在一个已有评审线程内回复。线程 id 来自 gh_pr_threads。返回回复 URL。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "threadId": {
+      "type": "string",
+      "description": "GraphQL thread id (`PRRT_...`) from gh_pr_threads."
+    },
+    "body": {
+      "type": "string",
+      "description": "Markdown reply body."
+    }
+  },
+  "required": [
+    "threadId",
+    "body"
+  ]
+}
+```
+
+来源：[`packages/github/tool-github/src/index.ts`](../packages/github/tool-github/src/index.ts)
+
+### `gh_pr_review`
+
+提交一次 pull request 评审：approve、request-changes 或 comment。需要 confirm: true。GitHub 禁止对自己的 pull request 执行 approve／request-changes；该拒绝会以类型化错误呈现。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "repo": {
+      "type": "string",
+      "description": "`owner/name`. Omit only when exactly one favorite repository is configured for the github service."
+    },
+    "number": {
+      "type": "integer",
+      "description": "Pull request number."
+    },
+    "event": {
+      "type": "string",
+      "description": "Review kind.",
+      "enum": [
+        "approve",
+        "request-changes",
+        "comment"
+      ]
+    },
+    "body": {
+      "type": "string",
+      "description": "Review body; required in practice for request-changes, optional otherwise."
+    },
+    "confirm": {
+      "type": "boolean",
+      "description": "Must be `true` to execute this mutation. Restate the target in the same turn so the human can veto."
+    }
+  },
+  "required": [
+    "number",
+    "event",
+    "confirm"
+  ]
+}
+```
+
+来源：[`packages/github/tool-github/src/index.ts`](../packages/github/tool-github/src/index.ts)
+
+### `gh_pr_thread`
+
+按 id 读取一个完整评审线程，包含每条评论正文。线程 id 来自 gh_pr_threads。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "threadId": {
+      "type": "string",
+      "description": "GraphQL thread id (`PRRT_...`) from gh_pr_threads."
+    }
+  },
+  "required": [
+    "threadId"
+  ]
+}
+```
+
+来源：[`packages/github/tool-github/src/index.ts`](../packages/github/tool-github/src/index.ts)
+
+### `gh_pr_thread_resolve`
+
+按 id 解决或重新打开一个评审线程。线程 id 来自 gh_pr_threads。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "threadId": {
+      "type": "string",
+      "description": "GraphQL thread id (`PRRT_...`) from gh_pr_threads."
+    },
+    "resolved": {
+      "type": "boolean",
+      "description": "True resolves the thread; false reopens it."
+    }
+  },
+  "required": [
+    "threadId",
+    "resolved"
+  ]
+}
+```
+
+来源：[`packages/github/tool-github/src/index.ts`](../packages/github/tool-github/src/index.ts)
+
+### `gh_pr_threads`
+
+列出一个 pull request 的评审线程，含位置（路径与行号）、解决状态、评论数与首条评论预览。默认只列未解决线程。每行携带 gh_pr_thread、gh_pr_reply 与 gh_pr_thread_resolve 所需的线程 id。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "repo": {
+      "type": "string",
+      "description": "`owner/name`. Omit only when exactly one favorite repository is configured for the github service."
+    },
+    "number": {
+      "type": "integer",
+      "description": "Pull request number."
+    },
+    "filter": {
+      "type": "string",
+      "description": "Which threads to return; defaults to unresolved.",
+      "enum": [
+        "all",
+        "resolved",
+        "unresolved"
+      ]
+    }
+  },
+  "required": [
+    "number"
+  ]
+}
+```
+
+来源：[`packages/github/tool-github/src/index.ts`](../packages/github/tool-github/src/index.ts)
+
+### `gh_pr_view`
+
+完整读取一个 GitHub pull request：元数据、标签、新增／删除行数、已解决与未解决评审线程计数、头提交的检查上下文以及 PR 正文。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "repo": {
+      "type": "string",
+      "description": "`owner/name`. Omit only when exactly one favorite repository is configured for the github service."
+    },
+    "number": {
+      "type": "integer",
+      "description": "Pull request number."
+    }
+  },
+  "required": [
+    "number"
+  ]
+}
+```
+
+来源：[`packages/github/tool-github/src/index.ts`](../packages/github/tool-github/src/index.ts)
+
+全部十二个工具都是 ctx.github gh-CLI 网关之上的薄桥接：读取类提供 PR 列表、详情、评审线程、提交以及有界的 pr-enrich 摘要；写入类覆盖评论、线程回复、线程解决、评审、合并与关闭。服务层的拒绝会以类型化的 GithubToolError 结果呈现；review、merge 与 close 还要求 confirm: true，增强分析要求 confirmExport: true。
 
 <a id="deepseek-aidsh-tool-terminal"></a>
 
