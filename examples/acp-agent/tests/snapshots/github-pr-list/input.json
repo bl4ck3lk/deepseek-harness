@@ -1,0 +1,7 @@
+{
+  "steps": [
+    { "op": "initialize" },
+    { "op": "newSession" },
+    { "op": "prompt", "text": "Use the gh_pr_list tool exactly once with no arguments, then reply with exactly DONE. Do not describe the result." }
+  ]
+}

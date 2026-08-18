@@ -1,0 +1,36 @@
+# GitHub composition for the github snapshot scenario: the gh-CLI gateway
+# service pointed at a deterministic fixture gh executable, the model-facing
+# gh_pr_* tool suite, and nothing else on top of the base tree — so the pinned
+# header carries exactly the surface under test. The scenario's
+# `prepareWorkspace` hook materializes the executable and `env` names its
+# stable path BEFORE the app spawns, so recording and keyless replay drive the
+# REAL gateway service and tool suite without GitHub network or credentials.
+# POSIX-only: the fixture lives at a stable /tmp path.
+#
+# The llm patch is recording-only plumbing: replay swaps the model layer for
+# the keyless replay adapter, so this config is live only while
+# `DSH_SNAPSHOT=record` harvests a transcript. With no override env set it
+# repeats the base DeepSeek defaults exactly; a deployment recording through
+# an OpenAI-compatible gateway sets DSH_SNAPSHOT_LLM_BASEURL (+ key env and
+# model list) instead of editing this file.
+- id: base
+  name: '@deepseek-ai/cordis-plugin-include'
+  config:
+    path: ./cordis.yml
+    patches:
+      - id: llm-deepseek
+        config: !!js >-
+          process.env.DSH_SNAPSHOT_LLM_BASEURL === undefined
+            ? { thinking: 'enabled', reasoningEffort: 'max', models: [{ id: 'deepseek-v4-flash' }, { id: 'deepseek-v4-pro' }] }
+            : { thinking: 'disabled', baseURL: process.env.DSH_SNAPSHOT_LLM_BASEURL, apiKeyEnv: process.env.DSH_SNAPSHOT_LLM_API_KEY_ENV ?? 'DSH_SNAPSHOT_LLM_API_KEY', models: (process.env.DSH_SNAPSHOT_LLM_MODELS ?? '').split(',').filter(id => id.length > 0).map(id => ({ id })) }
+      - insert:
+          - id: github
+            name: '@deepseek-ai/dsh-github'
+            config:
+              ghPath: !!js "process.env.DSH_ACP_GH_FIXTURE ?? '/tmp/dsh-acp-gh-fixture/gh'"
+              favorites: ['fixture-owner/fixture-repo']
+              cacheTtlMs: 0
+              reportRoot: /tmp/dsh-acp-gh-fixture/reports
+              allowWrites: false
+          - id: tool-github
+            name: '@deepseek-ai/dsh-tool-github'

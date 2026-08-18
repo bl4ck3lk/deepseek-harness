@@ -497,6 +497,9 @@ importers:
       '@deepseek-ai/dsh-fs-sandbox':
         specifier: workspace:^
         version: link:../packages/fs/fs-sandbox
+      '@deepseek-ai/dsh-github':
+        specifier: workspace:*
+        version: link:../packages/github/github
       '@deepseek-ai/dsh-goal':
         specifier: workspace:*
         version: link:../packages/goal/goal
@@ -677,6 +680,9 @@ importers:
       '@deepseek-ai/dsh-tool-fs-search':
         specifier: workspace:*
         version: link:../packages/fs/tool-fs-search
+      '@deepseek-ai/dsh-tool-github':
+        specifier: workspace:*
+        version: link:../packages/github/tool-github
       '@deepseek-ai/dsh-tool-goal':
         specifier: workspace:*
         version: link:../packages/goal/tool-goal

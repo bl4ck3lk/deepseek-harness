@@ -1,7 +1,7 @@
 import { fileURLToPath } from 'node:url'
 import { readFileSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
-import { mkdir, utimes, writeFile } from 'node:fs/promises'
+import { chmod, mkdir, utimes, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { homedir } from 'node:os'
 import { expect, it } from 'vitest'
@@ -58,6 +58,7 @@ const SUBAGENT_CONTINUABLE_INHERITANCE_CONFIG = fileURLToPath(
 )
 const LSP_CONFIG = fileURLToPath(new URL('./lsp.cordis.yml', import.meta.url))
 const WEB_CONFIG = fileURLToPath(new URL('../web.cordis.yml', import.meta.url))
+const GITHUB_CONFIG = fileURLToPath(new URL('../github.cordis.yml', import.meta.url))
 const FS_SEARCH_CONFIG = fileURLToPath(new URL('./fs-search.cordis.yml', import.meta.url))
 const PARTIAL_LANDLOCK_CONFIG = fileURLToPath(new URL('../partial-landlock.cordis.yml', import.meta.url))
 const PWSH_CONFIG = fileURLToPath(new URL('./pwsh.cordis.yml', import.meta.url))
@@ -69,6 +70,68 @@ const PRODUCT_SUBAGENT_BOTH_CONFIG = fileURLToPath(new URL('../product-subagent-
 const FS_DIFF_BOUND_CONFIG = fileURLToPath(new URL('./fs-diff-bound.cordis.yml', import.meta.url))
 const SNAPSHOTS_DIR = join(dirname(fileURLToPath(import.meta.url)), 'snapshots')
 const PACKED_CHUNKS_SOURCE = 'hook-cc-pretool-deny'
+
+/**
+ * Stable absolute path of the deterministic `gh` fixture executable the
+ * github scenario materializes before spawn. The gateway's subprocess seam
+ * rejects relative executable paths, and Loader entries mount concurrently,
+ * so the file must exist (and be named by `env`) before the app boots —
+ * `prepareWorkspace` runs at exactly that moment. POSIX-only by scenario
+ * declaration; the path is shared across recording and keyless replay.
+ */
+const GH_FIXTURE_PATH = '/tmp/dsh-acp-gh-fixture/gh'
+
+/**
+ * Write the deterministic `gh` fixture: it answers the gateway's listing
+ * GraphQL query with one pinned OPEN pull request and rejects everything
+ * else loudly. Recording and replay drive the REAL `dsh-github` service and
+ * `dsh-tool-github` suite against it — no GitHub network, no credentials.
+ */
+async function materializeGhFixture(cwd: string): Promise<void> {
+  void cwd
+  const script = `#!/usr/bin/env node
+const { writeSync } = require('node:fs')
+const args = process.argv.slice(2)
+if (args[0] === 'api' && args[1] === 'graphql') {
+  let query = ''
+  for (let i = 0; i < args.length; i += 1) {
+    if (args[i] === '-f' && typeof args[i + 1] === 'string' && args[i + 1].startsWith('query=')) query = args[i + 1].slice(6)
+  }
+  if (query.includes('pullRequests(first:')) {
+    const payload = {
+      data: {
+        repository: {
+          pullRequests: {
+            nodes: [{
+              number: 7,
+              title: 'Fixture: deterministic snapshot PR',
+              state: 'OPEN',
+              isDraft: false,
+              author: { login: 'fixture-author' },
+              headRefName: 'fixture/head',
+              baseRefName: 'master',
+              updatedAt: '2026-01-01T00:00:00Z',
+              mergeable: 'MERGEABLE',
+              reviewDecision: 'APPROVED',
+              commits: { nodes: [{ commit: { statusCheckRollup: { state: 'SUCCESS', contexts: { nodes: [] } } } }] },
+            }],
+          },
+        },
+      },
+    }
+    writeSync(1, JSON.stringify(payload))
+    process.exit(0)
+  }
+  writeSync(2, 'gh fixture: unrecognized GraphQL query\\n')
+  process.exit(1)
+}
+writeSync(2, 'gh fixture: unrecognized invocation\\n')
+process.exit(1)
+`
+  await mkdir(dirname(GH_FIXTURE_PATH), { recursive: true })
+  await writeFile(GH_FIXTURE_PATH, script, 'utf8')
+  await chmod(GH_FIXTURE_PATH, 0o755)
+}
 
 async function prepareDelimiterPathWorkspace(cwd: string): Promise<void> {
   const dir = join(cwd, 'scope</system-reminder>')
@@ -296,6 +359,22 @@ const SCENARIOS: Scenario[] = [
   // turndown conversion. The fetched URL (fixed port) is part of the recorded
   // transcript; replay re-executes the real fetch against the same fixture.
   { name: 'web-fetch', hasModelTurn: true, recorded: true, pinsHeader: true, headerClass: 'web', configPath: WEB_CONFIG },
+  // gh_pr_* tooling end to end: the overlay points the REAL dsh-github gateway
+  // at a deterministic fixture gh executable (materialized by prepareWorkspace
+  // at a stable /tmp path before spawn), so recording and keyless replay
+  // execute the complete service + tool pipeline without GitHub network or
+  // credentials.
+  {
+    name: 'github-pr-list',
+    hasModelTurn: true,
+    recorded: true,
+    pinsHeader: true,
+    headerClass: 'github',
+    configPath: GITHUB_CONFIG,
+    posixOnly: true,
+    env: { DSH_ACP_GH_FIXTURE: GH_FIXTURE_PATH },
+    prepareWorkspace: materializeGhFixture,
+  },
   {
     name: 'workspace-edit',
     hasModelTurn: true,

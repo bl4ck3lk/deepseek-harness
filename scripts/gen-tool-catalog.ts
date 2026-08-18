@@ -47,7 +47,7 @@ import CordisHostRunner from '@deepseek-ai/dsh-cordis-host-runner'
 import * as ToolCordis from '@deepseek-ai/dsh-tool-cordis'
 import * as ToolFs from '@deepseek-ai/dsh-tool-fs'
 import * as ToolFsSearch from '@deepseek-ai/dsh-tool-fs-search'
-import GithubService from '@deepseek-ai/dsh-github'
+import GithubService, { type GithubConfig } from '@deepseek-ai/dsh-github'
 import * as ToolGithub from '@deepseek-ai/dsh-tool-github'
 import * as ToolStrReplaceEditor from '@deepseek-ai/dsh-tool-str-replace-editor'
 import TerminalSessionService from '@deepseek-ai/dsh-terminal'
@@ -337,12 +337,13 @@ const TOOL_PACKAGES: ToolPackage[] = [
     requires: ['ctx.tools', 'ctx.systemPrompt', 'ctx.github'],
     writes: ['tool/call', 'tool/result'],
     async mount(ctx) {
-      // The tools inject `github`; the gateway service resolves the `gh`
-      // executable through the subprocess seam at activation, so the real
-      // local subprocess runtime mounts with it. No gh call runs during
-      // schema harvest.
+      // The tools inject `github`; the gateway service resolves its `gh`
+      // executable through the subprocess seam at activation. The harvest
+      // pins ghPath to an absolute, PATH-independent executable (no gh call
+      // runs during schema harvest), so the boot works even with an empty
+      // generator PATH.
       await ctx.plugin(LocalSubprocessRuntime)
-      await ctx.plugin(GithubService)
+      await ctx.plugin(GithubService, { ghPath: process.execPath } as unknown as GithubConfig)
       await ctx.plugin(ToolGithub)
     },
     note:
