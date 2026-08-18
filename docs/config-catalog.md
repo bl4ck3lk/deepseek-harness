@@ -624,6 +624,40 @@ Depends on: [`LocalConfig`](#deepseek-aidsh-fs-local)
 
 Source: [`packages/fs/fs-sandbox/src/index.ts:49`](../packages/fs/fs-sandbox/src/index.ts)
 
+<a id="deepseek-aidsh-github"></a>
+
+## `@deepseek-ai/dsh-github`
+
+Requires: `subprocess`
+
+```ts config-catalog
+/** Deployment policy for the GitHub capability. */
+export interface GithubConfig {
+  /** `gh` executable: absolute path or bare PATH name. */
+  readonly ghPath: string
+  /** Repositories addressable without an explicit `repo` argument. */
+  readonly favorites: string[]
+  /** In-memory read-cache lifetime in milliseconds; 0 disables caching. */
+  readonly cacheTtlMs: number
+  /** Deadline for one ordinary `gh` invocation, in milliseconds. */
+  readonly timeoutMs: number
+  /** Deadline for one `gh pr-enrich --enrich` invocation, in milliseconds. */
+  readonly enrichTimeoutMs: number
+  /** In-memory cap in bytes for one collected `gh` stdout stream. */
+  readonly maxOutputBytes: number
+  /** Whether write operations (comments, threads, reviews, merge) execute. */
+  readonly allowWrites: boolean
+  /** Whether `--enrich` analysis may export PR content to a model provider. */
+  readonly allowEnrich: boolean
+  /** Root directory for `gh pr-enrich` report directories. */
+  readonly reportRoot: string
+  /** Explicit environment layered onto every `gh` child (fixture hosts, tokens). */
+  readonly childEnv: Record<string, string>
+}
+```
+
+Source: [`packages/github/github/src/types.ts:362`](../packages/github/github/src/types.ts)
+
 <a id="deepseek-aidsh-goal"></a>
 
 ## `@deepseek-ai/dsh-goal`

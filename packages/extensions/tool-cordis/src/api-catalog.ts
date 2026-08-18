@@ -648,6 +648,91 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     ],
   },
   {
+    key: 'github',
+    summary: 'The GitHub capability service.',
+    description: 'The GitHub capability service. Reads are TTL-cached in memory; every successful write invalidates the whole cache. All subprocess work routes through the subprocess capability seam with fixed argv vectors.',
+    methods: [
+      {
+        signature: '@Remote(\'listPullRequests\') async listPullRequests(request: GithubListPullRequestsRequest): Promise<GithubResult<GithubPullRequestListValue>>',
+        description: 'List pull requests of one repository ordered by most recently updated.',
+        parameters: [{ name: 'request', description: 'repository selection plus optional state filter.' }],
+        returns: 'the repository\'s matching pull-request summaries.',
+      },
+      {
+        signature: '@Remote(\'getPullRequest\') async getPullRequest(request: GithubPullRequestRequest): Promise<GithubResult<GithubPrDetail>>',
+        description: 'Read one pull request\'s full detail: metadata, thread counts, checks.',
+        parameters: [{ name: 'request', description: 'repository and pull-request number.' }],
+        returns: 'the complete detail row.',
+      },
+      {
+        signature: '@Remote(\'listThreads\') async listThreads(request: GithubListThreadsRequest): Promise<GithubResult<GithubThreadListValue>>',
+        description: 'List one pull request\'s review threads with a resolution filter.',
+        parameters: [{ name: 'request', description: 'repository, number, and `unresolved`-default filter.' }],
+        returns: 'matching thread summaries with GraphQL thread ids.',
+      },
+      {
+        signature: '@Remote(\'getThread\') async getThread(request: GithubThreadRequest): Promise<GithubResult<GithubThreadFull>>',
+        description: 'Read one review thread\'s complete comment bodies by GraphQL node id.',
+        parameters: [{ name: 'request', description: 'the thread id.' }],
+        returns: 'the full thread.',
+      },
+      {
+        signature: '@Remote(\'listCommits\') async listCommits(request: GithubListCommitsRequest): Promise<GithubResult<GithubCommitListValue>>',
+        description: 'List one pull request\'s commits.',
+        parameters: [{ name: 'request', description: 'repository, number, and optional row cap.' }],
+        returns: 'commit rows plus the total commit count.',
+      },
+      {
+        signature: '@Remote(\'getContext\') async getContext(request: GithubGetContextRequest): Promise<GithubResult<GithubContextDigest>>',
+        description: 'Collect one pull request\'s bulk context through `gh pr-enrich`. Enrichment exports PR content to a model provider and is double-gated: the `allowEnrich` configuration and a per-call `confirmExport`.',
+        parameters: [{ name: 'request', description: 'target plus optional enrichment consent and checkout path.' }],
+        returns: 'the context digest with on-disk report locations.',
+      },
+      {
+        signature: '@Remote(\'addComment\') addComment(request: GithubAddCommentRequest): Promise<GithubResult<GithubCommentCreatedValue>>',
+        description: 'Create one top-level issue comment on a pull request.',
+        parameters: [{ name: 'request', description: 'target and comment body.' }],
+        returns: 'the created comment\'s URL.',
+      },
+      {
+        signature: '@Remote(\'replyToThread\') replyToThread(request: GithubReplyToThreadRequest): Promise<GithubResult<GithubCommentCreatedValue>>',
+        description: 'Reply inside one review thread.',
+        parameters: [{ name: 'request', description: 'thread id and reply body.' }],
+        returns: 'the created reply\'s URL.',
+      },
+      {
+        signature: '@Remote(\'setThreadResolved\') setThreadResolved(request: GithubSetThreadResolvedRequest): Promise<GithubResult<GithubThreadResolutionValue>>',
+        description: 'Resolve or unresolve one review thread.',
+        parameters: [{ name: 'request', description: 'thread id and desired resolution state.' }],
+        returns: 'the thread\'s new resolution state.',
+      },
+      {
+        signature: '@Remote(\'submitReview\') submitReview(request: GithubSubmitReviewRequest): Promise<GithubResult<GithubReviewSubmittedValue>>',
+        description: 'Submit one pull-request review. Requires `confirm: true`; GitHub forbids approving or requesting changes on your own pull request, which surfaces as the `self-review-forbidden` domain outcome.',
+        parameters: [{ name: 'request', description: 'target, event, optional body, and confirmation.' }],
+        returns: 'the submitted review facts.',
+      },
+      {
+        signature: '@Remote(\'mergePullRequest\') mergePullRequest(request: GithubMergePullRequestRequest): Promise<GithubResult<GithubPullRequestMergedValue>>',
+        description: 'Merge one pull request. Requires `confirm: true`.',
+        parameters: [{ name: 'request', description: 'target, merge method, optional branch deletion, confirmation.' }],
+        returns: 'the merge facts.',
+      },
+      {
+        signature: '@Remote(\'closePullRequest\') closePullRequest(request: GithubClosePullRequestRequest): Promise<GithubResult<GithubPullRequestStateValue>>',
+        description: 'Close one pull request without merging. Requires `confirm: true`.',
+        parameters: [{ name: 'request', description: 'target and confirmation.' }],
+        returns: 'the new lifecycle state.',
+      },
+      {
+        signature: '@Remote(\'reopenPullRequest\') reopenPullRequest(request: GithubReopenPullRequestRequest): Promise<GithubResult<GithubPullRequestStateValue>>',
+        description: 'Reopen one closed pull request.',
+        parameters: [{ name: 'request', description: 'the target.' }],
+        returns: 'the new lifecycle state.',
+      },
+    ],
+  },
+  {
     key: 'goals',
     summary: 'Goal service (`ctx.goals`) backed exclusively by the owning session log.',
     description: 'Goal service (`ctx.goals`) backed exclusively by the owning session log.',
@@ -3106,6 +3191,186 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'GenericResultView',
     declaration: 'export interface GenericResultView {\n    card: \'generic\';\n    title?: string;\n    content?: ContentBlock[];\n}',
+  },
+  {
+    name: 'GithubAddCommentRequest',
+    declaration: 'export interface GithubAddCommentRequest {\n    readonly repo: string;\n    readonly number: number;\n    readonly body: string;\n}',
+  },
+  {
+    name: 'GithubCheckContext',
+    declaration: 'export interface GithubCheckContext {\n    readonly kind: \'check-run\' | \'status\';\n    readonly name: string;\n    readonly status: string;\n    readonly conclusion: string | null;\n    readonly url: string | null;\n}',
+  },
+  {
+    name: 'GithubChecksState',
+    declaration: 'export type GithubChecksState = \'SUCCESS\' | \'FAILURE\' | \'PENDING\' | \'ERROR\' | \'EXPECTED\';',
+  },
+  {
+    name: 'GithubChecksSummary',
+    declaration: 'export interface GithubChecksSummary {\n    readonly state: GithubChecksState | null;\n    readonly contexts: readonly GithubCheckContext[];\n}',
+  },
+  {
+    name: 'GithubClosePullRequestRequest',
+    declaration: 'export interface GithubClosePullRequestRequest {\n    readonly repo: string;\n    readonly number: number;\n    readonly confirm?: boolean | undefined;\n}',
+  },
+  {
+    name: 'GithubCommentCreatedValue',
+    declaration: 'export interface GithubCommentCreatedValue {\n    readonly url: string;\n}',
+  },
+  {
+    name: 'GithubCommitInfo',
+    declaration: 'export interface GithubCommitInfo {\n    readonly sha: GithubCommitSha;\n    readonly headline: string;\n    readonly authorLogin: string | null;\n    readonly authorName: string | null;\n    readonly authoredDate: string;\n}',
+  },
+  {
+    name: 'GithubCommitListValue',
+    declaration: 'export interface GithubCommitListValue {\n    readonly repo: GithubRepoRef;\n    readonly number: number;\n    readonly totalCount: number;\n    readonly commits: readonly GithubCommitInfo[];\n}',
+  },
+  {
+    name: 'GithubCommitSha',
+    declaration: 'export type GithubCommitSha = Branded<\'githubCommitSha\'>;',
+  },
+  {
+    name: 'GithubContextDigest',
+    declaration: 'export interface GithubContextDigest {\n    readonly repo: GithubRepoRef;\n    readonly number: number;\n    readonly generatedAt: string;\n    readonly reportDir: string;\n    readonly commentCount: number;\n    readonly threadCounts: {\n        readonly total: number;\n        readonly unresolved: number;\n    };\n    readonly checks: {\n        readonly total: number;\n        readonly passing: number;\n        readonly failing: number;\n        readonly pending: number;\n        readonly overallState: string;\n    };\n    readonly enriched: boolean;\n    readonly files: {\n        readonly combined: string;\n        readonly report: string;\n        readonly threads: string;\n    };\n}',
+  },
+  {
+    name: 'GithubErrorCode',
+    declaration: 'export type GithubErrorCode = \'gh-missing\' | \'gh-launch-failed\' | \'gh-failed\' | \'graphql-error\' | \'invalid-response\' | \'invalid-repo\' | \'no-repo-configured\' | \'not-found\' | \'writes-disabled\' | \'enrich-disabled\' | \'confirmation-required\' | \'self-review-forbidden\' | \'enrich-failed\' | \'output-overflow\' | \'aborted\';',
+  },
+  {
+    name: 'GithubFailure',
+    declaration: 'export interface GithubFailure {\n    readonly code: GithubErrorCode;\n    readonly message: string;\n    readonly detail?: string;\n}',
+  },
+  {
+    name: 'GithubGetContextRequest',
+    declaration: 'export interface GithubGetContextRequest {\n    readonly repo: string;\n    readonly number: number;\n    readonly enrich?: boolean | undefined;\n    readonly confirmExport?: boolean | undefined;\n    readonly repoPath?: string | undefined;\n}',
+  },
+  {
+    name: 'GithubListCommitsRequest',
+    declaration: 'export interface GithubListCommitsRequest {\n    readonly repo: string;\n    readonly number: number;\n    readonly first?: number | undefined;\n}',
+  },
+  {
+    name: 'GithubListPullRequestsRequest',
+    declaration: 'export interface GithubListPullRequestsRequest {\n    readonly repo?: string | undefined;\n    readonly state?: GithubPrState | undefined;\n    readonly first?: number | undefined;\n}',
+  },
+  {
+    name: 'GithubListThreadsRequest',
+    declaration: 'export interface GithubListThreadsRequest {\n    readonly repo: string;\n    readonly number: number;\n    readonly filter?: GithubThreadFilter | undefined;\n}',
+  },
+  {
+    name: 'GithubMergeable',
+    declaration: 'export type GithubMergeable = \'MERGEABLE\' | \'CONFLICTING\' | \'UNKNOWN\';',
+  },
+  {
+    name: 'GithubMergeMethod',
+    declaration: 'export type GithubMergeMethod = \'squash\' | \'merge\' | \'rebase\';',
+  },
+  {
+    name: 'GithubMergePullRequestRequest',
+    declaration: 'export interface GithubMergePullRequestRequest {\n    readonly repo: string;\n    readonly number: number;\n    readonly method: GithubMergeMethod;\n    readonly deleteBranch?: boolean | undefined;\n    readonly confirm?: boolean | undefined;\n}',
+  },
+  {
+    name: 'GithubPrDetail',
+    declaration: 'export interface GithubPrDetail extends GithubPrSummary {\n    readonly nodeId: string;\n    readonly bodyText: string;\n    readonly additions: number;\n    readonly deletions: number;\n    readonly changedFiles: number;\n    readonly createdAt: string;\n    readonly labels: readonly string[];\n    readonly threadCounts: {\n        readonly total: number;\n        readonly unresolved: number;\n    };\n    readonly checks: GithubChecksSummary;\n}',
+  },
+  {
+    name: 'GithubPrState',
+    declaration: 'export type GithubPrState = \'OPEN\' | \'MERGED\' | \'CLOSED\';',
+  },
+  {
+    name: 'GithubPrSummary',
+    declaration: 'export interface GithubPrSummary {\n    readonly repo: GithubRepoRef;\n    readonly number: number;\n    readonly title: string;\n    readonly state: GithubPrState;\n    readonly isDraft: boolean;\n    readonly author: string;\n    readonly headRef: string;\n    readonly baseRef: string;\n    readonly updatedAt: string;\n    readonly mergeable: GithubMergeable;\n    readonly reviewDecision: GithubReviewDecision | null;\n    readonly checksState: GithubChecksState | null;\n}',
+  },
+  {
+    name: 'GithubPullRequestListValue',
+    declaration: 'export interface GithubPullRequestListValue {\n    readonly repo: GithubRepoRef;\n    readonly pullRequests: readonly GithubPrSummary[];\n}',
+  },
+  {
+    name: 'GithubPullRequestMergedValue',
+    declaration: 'export interface GithubPullRequestMergedValue {\n    readonly repo: GithubRepoRef;\n    readonly number: number;\n    readonly method: GithubMergeMethod;\n}',
+  },
+  {
+    name: 'GithubPullRequestRequest',
+    declaration: 'export interface GithubPullRequestRequest {\n    readonly repo: string;\n    readonly number: number;\n}',
+  },
+  {
+    name: 'GithubPullRequestStateValue',
+    declaration: 'export interface GithubPullRequestStateValue {\n    readonly repo: GithubRepoRef;\n    readonly number: number;\n    readonly state: GithubPrState;\n}',
+  },
+  {
+    name: 'GithubRejected',
+    declaration: 'export interface GithubRejected {\n    readonly ok: false;\n    readonly error: GithubFailure;\n}',
+  },
+  {
+    name: 'GithubReopenPullRequestRequest',
+    declaration: 'export interface GithubReopenPullRequestRequest {\n    readonly repo: string;\n    readonly number: number;\n}',
+  },
+  {
+    name: 'GithubReplyToThreadRequest',
+    declaration: 'export interface GithubReplyToThreadRequest {\n    readonly threadId: GithubThreadId;\n    readonly body: string;\n}',
+  },
+  {
+    name: 'GithubRepoRef',
+    declaration: 'export interface GithubRepoRef {\n    readonly owner: string;\n    readonly name: string;\n}',
+  },
+  {
+    name: 'GithubResult',
+    declaration: 'export type GithubResult<T> = GithubSuccess<T> | GithubRejected;',
+  },
+  {
+    name: 'GithubReviewDecision',
+    declaration: 'export type GithubReviewDecision = \'APPROVED\' | \'REVIEW_REQUIRED\' | \'CHANGES_REQUESTED\' | \'CLOSED\';',
+  },
+  {
+    name: 'GithubReviewEvent',
+    declaration: 'export type GithubReviewEvent = \'approve\' | \'request-changes\' | \'comment\';',
+  },
+  {
+    name: 'GithubReviewSubmittedValue',
+    declaration: 'export interface GithubReviewSubmittedValue {\n    readonly repo: GithubRepoRef;\n    readonly number: number;\n    readonly event: GithubReviewEvent;\n}',
+  },
+  {
+    name: 'GithubSetThreadResolvedRequest',
+    declaration: 'export interface GithubSetThreadResolvedRequest {\n    readonly threadId: GithubThreadId;\n    readonly resolved: boolean;\n}',
+  },
+  {
+    name: 'GithubSubmitReviewRequest',
+    declaration: 'export interface GithubSubmitReviewRequest {\n    readonly repo: string;\n    readonly number: number;\n    readonly event: GithubReviewEvent;\n    readonly body?: string | undefined;\n    readonly confirm?: boolean | undefined;\n}',
+  },
+  {
+    name: 'GithubSuccess',
+    declaration: 'export interface GithubSuccess<T> {\n    readonly ok: true;\n    readonly value: T;\n}',
+  },
+  {
+    name: 'GithubThreadComment',
+    declaration: 'export interface GithubThreadComment {\n    readonly id: string;\n    readonly databaseId: number;\n    readonly author: string;\n    readonly createdAt: string;\n    readonly body: string;\n}',
+  },
+  {
+    name: 'GithubThreadFilter',
+    declaration: 'export type GithubThreadFilter = \'all\' | \'resolved\' | \'unresolved\';',
+  },
+  {
+    name: 'GithubThreadFull',
+    declaration: 'export interface GithubThreadFull {\n    readonly id: GithubThreadId;\n    readonly path: string;\n    readonly line: number | null;\n    readonly isResolved: boolean;\n    readonly comments: readonly GithubThreadComment[];\n}',
+  },
+  {
+    name: 'GithubThreadId',
+    declaration: 'export type GithubThreadId = Branded<\'githubThreadId\'>;',
+  },
+  {
+    name: 'GithubThreadListValue',
+    declaration: 'export interface GithubThreadListValue {\n    readonly repo: GithubRepoRef;\n    readonly number: number;\n    readonly filter: GithubThreadFilter;\n    readonly threads: readonly GithubThreadSummary[];\n}',
+  },
+  {
+    name: 'GithubThreadRequest',
+    declaration: 'export interface GithubThreadRequest {\n    readonly threadId: GithubThreadId;\n}',
+  },
+  {
+    name: 'GithubThreadResolutionValue',
+    declaration: 'export interface GithubThreadResolutionValue {\n    readonly threadId: GithubThreadId;\n    readonly isResolved: boolean;\n}',
+  },
+  {
+    name: 'GithubThreadSummary',
+    declaration: 'export interface GithubThreadSummary {\n    readonly id: GithubThreadId;\n    readonly path: string;\n    readonly line: number | null;\n    readonly isResolved: boolean;\n    readonly isOutdated: boolean;\n    readonly commentCount: number;\n    readonly resolvedBy: string | null;\n    readonly firstComment: GithubThreadComment | null;\n}',
   },
   {
     name: 'GoalActivation',

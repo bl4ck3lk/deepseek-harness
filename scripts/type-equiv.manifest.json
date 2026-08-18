@@ -1929,6 +1929,236 @@
       "doc": "docs/subsystems/feedback.md",
       "symbol": "MessageFeedbackDeleteResult",
       "source": "packages/feedback/message-feedback/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/github.md",
+      "symbol": "GithubThreadId",
+      "source": "packages/github/github/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/github.md",
+      "symbol": "GithubCommitSha",
+      "source": "packages/github/github/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/github.md",
+      "symbol": "GithubRepoRef",
+      "source": "packages/github/github/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/github.md",
+      "symbol": "GithubPrState",
+      "source": "packages/github/github/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/github.md",
+      "symbol": "GithubMergeable",
+      "source": "packages/github/github/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/github.md",
+      "symbol": "GithubChecksState",
+      "source": "packages/github/github/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/github.md",
+      "symbol": "GithubReviewDecision",
+      "source": "packages/github/github/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/github.md",
+      "symbol": "GithubReviewEvent",
+      "source": "packages/github/github/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/github.md",
+      "symbol": "GithubMergeMethod",
+      "source": "packages/github/github/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/github.md",
+      "symbol": "GithubThreadFilter",
+      "source": "packages/github/github/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/github.md",
+      "symbol": "GithubPrSummary",
+      "source": "packages/github/github/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/github.md",
+      "symbol": "GithubCheckContext",
+      "source": "packages/github/github/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/github.md",
+      "symbol": "GithubChecksSummary",
+      "source": "packages/github/github/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/github.md",
+      "symbol": "GithubThreadSummary",
+      "source": "packages/github/github/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/github.md",
+      "symbol": "GithubThreadComment",
+      "source": "packages/github/github/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/github.md",
+      "symbol": "GithubThreadFull",
+      "source": "packages/github/github/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/github.md",
+      "symbol": "GithubCommitInfo",
+      "source": "packages/github/github/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/github.md",
+      "symbol": "GithubPrDetail",
+      "source": "packages/github/github/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/github.md",
+      "symbol": "GithubContextDigest",
+      "source": "packages/github/github/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/github.md",
+      "symbol": "GithubFailure",
+      "source": "packages/github/github/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/github.md",
+      "symbol": "GithubSuccess",
+      "source": "packages/github/github/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/github.md",
+      "symbol": "GithubRejected",
+      "source": "packages/github/github/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/github.md",
+      "symbol": "GithubResult",
+      "source": "packages/github/github/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/github.md",
+      "symbol": "GithubErrorCode",
+      "source": "packages/github/github/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/github.md",
+      "symbol": "GithubListPullRequestsRequest",
+      "source": "packages/github/github/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/github.md",
+      "symbol": "GithubPullRequestListValue",
+      "source": "packages/github/github/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/github.md",
+      "symbol": "GithubPullRequestRequest",
+      "source": "packages/github/github/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/github.md",
+      "symbol": "GithubListThreadsRequest",
+      "source": "packages/github/github/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/github.md",
+      "symbol": "GithubThreadListValue",
+      "source": "packages/github/github/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/github.md",
+      "symbol": "GithubThreadRequest",
+      "source": "packages/github/github/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/github.md",
+      "symbol": "GithubListCommitsRequest",
+      "source": "packages/github/github/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/github.md",
+      "symbol": "GithubCommitListValue",
+      "source": "packages/github/github/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/github.md",
+      "symbol": "GithubGetContextRequest",
+      "source": "packages/github/github/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/github.md",
+      "symbol": "GithubAddCommentRequest",
+      "source": "packages/github/github/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/github.md",
+      "symbol": "GithubReplyToThreadRequest",
+      "source": "packages/github/github/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/github.md",
+      "symbol": "GithubSetThreadResolvedRequest",
+      "source": "packages/github/github/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/github.md",
+      "symbol": "GithubSubmitReviewRequest",
+      "source": "packages/github/github/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/github.md",
+      "symbol": "GithubMergePullRequestRequest",
+      "source": "packages/github/github/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/github.md",
+      "symbol": "GithubClosePullRequestRequest",
+      "source": "packages/github/github/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/github.md",
+      "symbol": "GithubReopenPullRequestRequest",
+      "source": "packages/github/github/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/github.md",
+      "symbol": "GithubCommentCreatedValue",
+      "source": "packages/github/github/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/github.md",
+      "symbol": "GithubThreadResolutionValue",
+      "source": "packages/github/github/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/github.md",
+      "symbol": "GithubReviewSubmittedValue",
+      "source": "packages/github/github/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/github.md",
+      "symbol": "GithubPullRequestMergedValue",
+      "source": "packages/github/github/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/github.md",
+      "symbol": "GithubPullRequestStateValue",
+      "source": "packages/github/github/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/github.md",
+      "symbol": "GithubConfig",
+      "source": "packages/github/github/src/types.ts"
     }
   ]
 }

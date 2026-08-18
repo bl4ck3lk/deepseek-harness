@@ -99,6 +99,7 @@
       "@deepseek-ai/dsh-agent-loop/invariant": ["./packages/core/agent-loop/src/invariant.ts"],
       "@deepseek-ai/dsh-*/invariant": [
         "./packages/core/*/src/invariant.ts",
+        "./packages/github/*/src/invariant.ts",
         "./packages/prompt/*/src/invariant.ts",
         "./packages/llm/*/src/invariant.ts",
         "./packages/shell/*/src/invariant.ts",
@@ -225,8 +226,10 @@
       "@deepseek-ai/dsh-sdk-client": ["./packages/sdk/client/src"],
       "@deepseek-ai/dsh-sdk-protocol": ["./packages/sdk/protocol/src"],
       "@deepseek-ai/dsh-sdk-jsonrpc-server": ["./packages/sdk/server/src"],
+      "@deepseek-ai/dsh-github/types": ["./packages/github/github/src/types.ts"],
       "@deepseek-ai/dsh-*": [
         "./packages/core/*/src",
+        "./packages/github/*/src",
         "./packages/prompt/*/src",
         "./packages/llm/*/src",
         "./packages/shell/*/src",

@@ -73,6 +73,7 @@ const GROUP_ORDER = [
   'sandbox',
   'e2b',
   'fs',
+  'github',
   'skill',
   'compact',
   'subagent',
@@ -220,6 +221,13 @@ const SERVICE_ROLES: ServiceRole[] = [
     title: 'Lifecycle-bound message feedback',
     mode: 'core',
     note: 'Owns local per-assistant-message feedback, lifecycle and target validation, per-item compare-and-set, and the Host unary Remote contract without entering Session history or telemetry.',
+  },
+  {
+    key: 'github',
+    pkg: 'github',
+    title: 'GitHub pull-request gateway',
+    mode: 'core',
+    note: 'Owns the authenticated gh CLI gateway for the pull-request domain: GraphQL reads, thread mutations, reviews, merges, TTL caching, and write/enrichment gating over the subprocess seam.',
   },
   {
     key: 'workspaceRegistry',
