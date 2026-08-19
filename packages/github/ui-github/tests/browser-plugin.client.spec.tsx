@@ -63,6 +63,7 @@ interface GithubScript {
   detail?: Envelope<unknown>
   threads?: Envelope<unknown>
   commits?: Envelope<unknown>
+  thread?: Envelope<unknown>
 }
 
 function makeGithub(script: GithubScript = {}) {
@@ -86,6 +87,10 @@ function makeGithub(script: GithubScript = {}) {
       listCommits: (request: unknown) => {
         calls.push({ method: 'listCommits', request })
         return Promise.resolve(script.commits ?? success({ repo: { owner: 'o', name: 'r' }, number: 7, totalCount: 0, commits: [] }))
+      },
+      getThread: (request: unknown) => {
+        calls.push({ method: 'getThread', request })
+        return Promise.resolve(script.thread ?? success({ id: 'PRRT_1', path: 'src/a.ts', line: 12, isResolved: false, comments: [] }))
       },
     },
   }
@@ -439,6 +444,74 @@ describe('GithubView', () => {
     expect(container.textContent).toContain('abcdef1')
     expect(script.calls.filter(call => call.method === 'getPullRequest')[0]?.request)
       .toEqual({ number: 7 })
+  })
+
+  it('expands a multi-comment thread to its full comment list via getThread', async () => {
+    const fullThread = {
+      id: 'PRRT_1', path: 'src/a.ts', line: 12, isResolved: false,
+      comments: [
+        { id: 'c1', databaseId: 1, author: 'alice', createdAt: '2026-01-01T00:00:00Z', body: 'Please fix' },
+        { id: 'c2', databaseId: 2, author: 'bob', createdAt: '2026-01-02T00:00:00Z', body: 'Fixed, thanks' },
+      ],
+    }
+    const script = makeGithub({
+      detail: { ok: true, value: { ok: true, value: DETAIL } },
+      threads: { ok: true, value: { ok: true, value: THREADS } },
+      commits: { ok: true, value: { ok: true, value: COMMITS } },
+      thread: { ok: true, value: { ok: true, value: fullThread } },
+    })
+    const { findByText, container } = render(<GithubView {...viewProps(script.remote)} />)
+    fireEvent.click(await findByText('Open PR'))
+    await findByText('alice: Please fix')
+    fireEvent.click(await findByText(zh['view.threads.showFull']))
+    await findByText('Fixed, thanks')
+    expect(container.textContent).toContain('Please fix')
+    expect(script.calls.filter(call => call.method === 'getThread')[0]?.request).toEqual({ threadId: 'PRRT_1' })
+    fireEvent.click(await findByText(zh['view.threads.hideFull']))
+    expect(container.textContent).not.toContain('Fixed, thanks')
+  })
+
+  it('does not refetch a full thread already cached from an earlier expand', async () => {
+    const script = makeGithub({
+      detail: { ok: true, value: { ok: true, value: DETAIL } },
+      threads: { ok: true, value: { ok: true, value: THREADS } },
+      commits: { ok: true, value: { ok: true, value: COMMITS } },
+      thread: { ok: true, value: { ok: true, value: { id: 'PRRT_1', path: 'src/a.ts', line: 12, isResolved: false, comments: [] } } },
+    })
+    const { findByText } = render(<GithubView {...viewProps(script.remote)} />)
+    fireEvent.click(await findByText('Open PR'))
+    fireEvent.click(await findByText(zh['view.threads.showFull']))
+    await waitFor(() => {
+      expect(script.calls.filter(call => call.method === 'getThread')).toHaveLength(1)
+    })
+    fireEvent.click(await findByText(zh['view.threads.hideFull']))
+    fireEvent.click(await findByText(zh['view.threads.showFull']))
+    expect(script.calls.filter(call => call.method === 'getThread')).toHaveLength(1)
+  })
+
+  it('shows an error notice when the full-thread fetch fails', async () => {
+    const script = makeGithub({
+      detail: { ok: true, value: { ok: true, value: DETAIL } },
+      threads: { ok: true, value: { ok: true, value: THREADS } },
+      commits: { ok: true, value: { ok: true, value: COMMITS } },
+      thread: { ok: true, value: { ok: false, error: { code: 'not-found', message: 'thread gone' } } },
+    })
+    const { findByText } = render(<GithubView {...viewProps(script.remote)} />)
+    fireEvent.click(await findByText('Open PR'))
+    fireEvent.click(await findByText(zh['view.threads.showFull']))
+    await findByText(zh['view.threads.loadFullError'].replace('{message}', 'thread gone'))
+  })
+
+  it('does not offer expansion for a single-comment thread', async () => {
+    const script = makeGithub({
+      detail: { ok: true, value: { ok: true, value: DETAIL } },
+      threads: { ok: true, value: { ok: true, value: THREADS } },
+      commits: { ok: true, value: { ok: true, value: COMMITS } },
+    })
+    const { findByText, queryAllByText, container } = render(<GithubView {...viewProps(script.remote)} />)
+    fireEvent.click(await findByText('Open PR'))
+    await waitFor(() => { expect(container.textContent).toContain('src/b.ts') })
+    expect(queryAllByText(zh['view.threads.showFull'])).toHaveLength(1)
   })
 
   it('returns to the listing from its back button', async () => {

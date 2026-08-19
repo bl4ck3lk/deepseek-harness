@@ -11,7 +11,7 @@ import type { ConvViewProps } from '@deepseek-ai/dsh-client-ui-conversation/clie
 import type { ClientRemote } from '@deepseek-ai/dsh-api-remotes/client'
 import type {
   GithubCommitListValue, GithubPrDetail, GithubPrState, GithubPrSummary,
-  GithubResult, GithubThreadFilter, GithubThreadListValue,
+  GithubResult, GithubThreadFilter, GithubThreadFull, GithubThreadId, GithubThreadListValue,
 } from '@deepseek-ai/dsh-github/types'
 import css from './GithubView.module.css'
 
@@ -49,6 +49,66 @@ function stateBadgeClass(state: GithubPrState): string | undefined {
   return state === 'OPEN' ? `${css.badge} ${css.badgeOpen}` : css.badge
 }
 
+/** One fetched full thread's outcome: pending, every comment, or a message. */
+type FullThreadState =
+  | { status: 'loading' }
+  | { status: 'done'; thread: GithubThreadFull }
+  | { status: 'error'; message: string }
+
+/**
+ * One review-thread row: the collapsed header and first-comment excerpt
+ * always show; expanding fetches the thread's complete comment list once
+ * and caches it in the parent's map so re-collapsing keeps the fetch.
+ */
+function ThreadRow({ thread, full, expanded, onToggle, t }: {
+  thread: GithubThreadListValue['threads'][number]
+  full: FullThreadState | undefined
+  expanded: boolean
+  onToggle: () => void
+  t: GithubViewProps['t']
+}) {
+  return (
+    <div className={css.threadRow}>
+      <span className={css.threadPath}>
+        {`${thread.path}${thread.line === null ? '' : `:${thread.line}`}`}
+        {thread.isOutdated ? ` (${t('view.threads.outdated')})` : ''}
+        {` · ${thread.isResolved ? t('card.resolved') : t('card.unresolved')}`}
+        {` · ${t('view.threads.comments', { count: thread.commentCount })}`}
+      </span>
+      {thread.firstComment !== null && (
+        <p className={css.threadExcerpt}>
+          {`${thread.firstComment.author}: ${thread.firstComment.body}`}
+        </p>
+      )}
+      {thread.commentCount > 1 && (
+        <button type="button" className={css.threadExpandButton} onClick={onToggle}>
+          {expanded ? t('view.threads.hideFull') : t('view.threads.showFull')}
+        </button>
+      )}
+      {expanded && full?.status === 'loading' && (
+        <p className={css.notice}>{t('view.threads.loadingFull')}</p>
+      )}
+      {expanded && full?.status === 'error' && (
+        <p className={`${css.notice} ${css.noticeError}`} role="alert">
+          {t('view.threads.loadFullError', { message: full.message })}
+        </p>
+      )}
+      {expanded && full?.status === 'done' && (
+        <div className={css.threadComments}>
+          {full.thread.comments.map(comment => (
+            <div className={css.threadComment} key={comment.id}>
+              <span className={css.threadCommentMeta}>
+                {`${comment.author} · ${comment.createdAt}`}
+              </span>
+              <p className={css.threadCommentBody}>{comment.body}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 /**
  * The dashboard tab body. All fetches go through the injected Remote
  * namespace; a request counter discards stale responses so fast repo or
@@ -65,6 +125,8 @@ export function GithubView({ github, t }: GithubViewProps) {
   const [threads, setThreads] = useState<GithubThreadListValue | null>(null)
   const [threadFilter, setThreadFilter] = useState<GithubThreadFilter>('unresolved')
   const [commits, setCommits] = useState<GithubCommitListValue | null>(null)
+  const [expandedThreads, setExpandedThreads] = useState<ReadonlySet<GithubThreadId>>(new Set())
+  const [fullThreads, setFullThreads] = useState<ReadonlyMap<GithubThreadId, FullThreadState>>(new Map())
   const requestId = useRef(0)
 
   const repoArg = (): string | undefined => {
@@ -111,8 +173,31 @@ export function GithubView({ github, t }: GithubViewProps) {
       setDetail(detailResult.ok ? detailResult.value : null)
       setThreads(threadResult.ok ? threadResult.value : null)
       setCommits(commitResult.ok ? commitResult.value : null)
+      setExpandedThreads(new Set())
+      setFullThreads(new Map())
     })()
   }, [github, selected, threadFilter, repoText])
+
+  const toggleThread = useCallback((threadId: GithubThreadId) => {
+    setExpandedThreads((current) => {
+      const next = new Set(current)
+      if (next.has(threadId)) {
+        next.delete(threadId)
+        return next
+      }
+      next.add(threadId)
+      return next
+    })
+    if (fullThreads.has(threadId)) return
+    setFullThreads(current => new Map(current).set(threadId, { status: 'loading' }))
+    void (async () => {
+      const result = await settle(github.getThread({ threadId }))
+      setFullThreads(current => new Map(current).set(
+        threadId,
+        result.ok ? { status: 'done', thread: result.value } : { status: 'error', message: result.message },
+      ))
+    })()
+  }, [github, fullThreads])
 
   return (
     <div className={css.view}>
@@ -231,19 +316,14 @@ export function GithubView({ github, t }: GithubViewProps) {
             <p className={css.notice}>{t('view.threads.empty')}</p>
           )}
           {threads?.threads.map(thread => (
-            <div className={css.threadRow} key={thread.id}>
-              <span className={css.threadPath}>
-                {`${thread.path}${thread.line === null ? '' : `:${thread.line}`}`}
-                {thread.isOutdated ? ` (${t('view.threads.outdated')})` : ''}
-                {` · ${thread.isResolved ? t('card.resolved') : t('card.unresolved')}`}
-                {` · ${t('view.threads.comments', { count: thread.commentCount })}`}
-              </span>
-              {thread.firstComment !== null && (
-                <p className={css.threadExcerpt}>
-                  {`${thread.firstComment.author}: ${thread.firstComment.body}`}
-                </p>
-              )}
-            </div>
+            <ThreadRow
+              key={thread.id}
+              thread={thread}
+              full={fullThreads.get(thread.id)}
+              expanded={expandedThreads.has(thread.id)}
+              onToggle={() => { toggleThread(thread.id) }}
+              t={t}
+            />
           ))}
 
           <div className={css.sectionHeader}>
