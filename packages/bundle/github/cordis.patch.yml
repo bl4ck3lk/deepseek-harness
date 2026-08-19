@@ -1,0 +1,20 @@
+# The dsh-github-app bundle patch: the opt-in GitHub PR surface. Applied as an
+# extra profile bundle layer after dsh-base and dsh-web-app, it inserts the
+# gh-CLI gateway service (host) and the GitHub browser UI (client); nothing in
+# the default profile references either, so a deployment without this bundle
+# carries no GitHub code path at all. Per-deployment tuning (favorites,
+# write/enrich gates, report root) belongs in the profile's own
+# cordis.patch.yml overriding the `github` row by id.
+
+- insert:
+    # The gateway: gh-CLI subprocess seam, GraphQL read/mutation paths, and
+    # the pr-enrich collector. Writes stay config-gated (default on);
+    # enrichment is double-gated (config off by default plus a per-call
+    # confirmExport).
+    - id: github
+      name: '@deepseek-ai/dsh-github'
+
+    # The browser surface: the GitHub dashboard tab in the conversation view
+    # ring plus the gh_pr_* tool cards, over the ctx.remote.github namespace.
+    - id: ui-github
+      name: '@deepseek-ai/dsh-client-ui-github'

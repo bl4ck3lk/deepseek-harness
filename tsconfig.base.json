@@ -227,6 +227,11 @@
       "@deepseek-ai/dsh-sdk-protocol": ["./packages/sdk/protocol/src"],
       "@deepseek-ai/dsh-sdk-jsonrpc-server": ["./packages/sdk/server/src"],
       "@deepseek-ai/dsh-github/types": ["./packages/github/github/src/types.ts"],
+      // The GitHub browser package's directory name (ui-github) is not the
+      // manifest-name suffix, so the generic wildcard cannot map it.
+      "@deepseek-ai/dsh-client-ui-github": ["./packages/github/ui-github/src"],
+      "@deepseek-ai/dsh-client-ui-github/client": ["./packages/github/ui-github/src/client"],
+      "@deepseek-ai/dsh-client-ui-github/invariant": ["./packages/github/ui-github/src/invariant.ts"],
       "@deepseek-ai/dsh-*": [
         "./packages/core/*/src",
         "./packages/github/*/src",

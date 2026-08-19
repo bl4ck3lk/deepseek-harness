@@ -1,0 +1,72 @@
+/* GitHub tool card: DisclosureRow chrome (leading/chevron/title come from
+   that primitive) plus this card's summary line and JSON detail body. */
+
+.card {
+  display: flex;
+  flex-direction: column;
+}
+
+.card .title,
+.card .chevron {
+  color: var(--dsw-alias-state-business-primary);
+}
+
+.title {
+  flex: none;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 24px;
+}
+
+.summary {
+  flex: none;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--dsw-alias-label-secondary);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 0 4px 0;
+}
+
+.factRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--dsw-alias-label-secondary);
+}
+
+.factLabel {
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.link {
+  color: var(--dsw-alias-state-business-primary);
+  text-decoration: none;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.code {
+  max-height: 280px;
+  overflow: auto;
+}
