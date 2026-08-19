@@ -416,6 +416,18 @@
         "tests/**/*.ts"
       ]
     },
+    "packages/github/github": {
+      "entry": [
+        "tests/**/*.spec.ts"
+      ],
+      "project": [
+        "src/**/*.ts",
+        "tests/**/*.ts"
+      ],
+      "ignoreDependencies": [
+        "zod"
+      ]
+    },
     "packages/goal/goal": {
       "entry": [
         "tests/**/*.spec.ts",
